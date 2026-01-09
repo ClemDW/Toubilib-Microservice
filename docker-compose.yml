@@ -3,8 +3,6 @@ networks:
     driver: bridge
 
 services:
-  # service api.toubeelib : api pour la prise de rdv
-  #
   api.toubilib:
     build:
       context: build
