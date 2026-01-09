@@ -7,5 +7,5 @@ use toubilib\core\application\ports\api\dtos\ProfileDTO;
 
 interface AuthnProviderInterface
 {
-    public function signin(CredentialsDTO $credentials) : AuthDTO;
+    public function signin(CredentialsDTO $credentials);
 }
