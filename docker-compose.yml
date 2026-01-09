@@ -26,7 +26,7 @@ services:
     ports:
       - '6081:80'
     volumes:
-      - ./app:/var/php
+      - ./gateway:/var/php
     working_dir: /var/php
     networks:
       - toubilib.net
@@ -44,7 +44,8 @@ services:
     networks:
       - toubilib.net
     volumes:
-      - ./sql:/var/sql
+      - ./sql/toubiprat.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./sql/toubiprat.data.sql:/docker-entrypoint-initdb.d/2-data.sql
 
 
   toubirdv.db:
@@ -55,7 +56,8 @@ services:
     networks:
       - toubilib.net
     volumes:
-      - ./sql:/var/sql
+      - ./sql/toubirdv.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./sql/toubirdv.data.sql:/docker-entrypoint-initdb.d/2-data.sql
 
   toubiauth.db:
     image: 'postgres:latest'
@@ -65,7 +67,8 @@ services:
     networks:
       - toubilib.net
     volumes:
-      - ./sql:/var/sql
+      - ./sql/toubiauth.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./sql/toubiauth.data.sql:/docker-entrypoint-initdb.d/2-data.sql
 
   toubipatient.db:
     image: 'postgres:latest'
@@ -75,7 +78,8 @@ services:
     networks:
       - toubilib.net
     volumes:
-      - ./sql:/var/sql
+      - ./sql/toubipat.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./sql/toubipat.data.sql:/docker-entrypoint-initdb.d/2-data.sql
 
   #
   # service administration des bases sql
@@ -86,4 +90,3 @@ services:
       - '8080:8080'
     networks:
       - toubilib.net
-
