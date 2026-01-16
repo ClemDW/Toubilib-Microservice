@@ -14,6 +14,7 @@ use toubilib\api\actions\MarquerRdvNonHonoreAction;
 use toubilib\api\actions\SigninAction;
 use toubilib\api\provider\AuthnProviderInterface;
 use toubilib\core\application\ports\api\ServicePraticienInterface;
+use toubilib\core\application\ports\api\ServiceRdvInterface;
 
 return [
     ListerPraticiensAction::class => function ($c) {
@@ -35,7 +36,7 @@ return [
         return new CreerRdvAction($c->get(ServicePraticienInterface::class));
     },
     ListerRdvAction::class => function ($c) {
-        return new ListerRdvAction($c->get(ServicePraticienInterface::class));
+        return new ListerRdvAction($c->get(ServiceRdvInterface::class));
     },
     ListerRdvPatientAction::class => function ($c) {
         return new ListerRdvPatientAction($c->get(ServicePraticienInterface::class));

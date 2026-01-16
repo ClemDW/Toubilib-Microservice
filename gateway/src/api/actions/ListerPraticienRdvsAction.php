@@ -10,20 +10,23 @@ use Slim\Exception\HttpNotFoundException;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\ClientInterface;
 
-class ListerPraticiensActionGateway
+class ListerPraticienRdvsAction
 {
-    private ClientInterface $remote_praticien_service;
+    private ClientInterface $remote_rdvs_service;
 
-    public function __construct(ClientInterface $remote_praticien_service)
+    public function __construct(ClientInterface $remote_rdvs_service)
     {
-        $this->remote_praticien_service = $remote_praticien_service;
+        $this->remote_rdvs_service = $remote_rdvs_service;
     }
 
     public function __invoke(ServerRequestInterface $request,ResponseInterface $response, array $args): ResponseInterface {
         try {
-            $response = $this->remote_praticien_service->get("/praticiens");
+            $response = $this->remote_rdvs_service->get("/praticiens/" . $args['id'] . "/rdvs");
         } catch (ClientException $e) {
-            throw new HttpNotFoundException($request, " … ");
+            if ($e->getResponse()->getStatusCode() === 404) {
+                throw new HttpNotFoundException($request, "Praticien introuvable");
+            }
+            throw $e;
         }
         return $response;
     }

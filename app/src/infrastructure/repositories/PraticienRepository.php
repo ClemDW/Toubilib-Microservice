@@ -4,6 +4,8 @@ namespace toubilib\infra\repositories;
 
 use toubilib\core\application\ports\spi\repositoryInterfaces\PraticienRepositoryInterface;
 use toubilib\core\domain\entities\Praticien;
+use toubilib\core\application\ports\spi\exceptions\PraticienNonTrouveException;
+use Ramsey\Uuid\Uuid;
 
 class PraticienRepository implements PraticienRepositoryInterface
 {
@@ -38,11 +40,19 @@ class PraticienRepository implements PraticienRepositoryInterface
 
     public function get(string $id): Praticien
     {
+        if (!Uuid::isValid($id)) {
+            throw new PraticienNonTrouveException("Praticien non trouvé");
+        }
+
         $sql = "SELECT id, nom, prenom, ville, email, telephone, specialite_id FROM praticien WHERE id = :id";
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindParam(':id', $id);
         $stmt->execute();
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            throw new PraticienNonTrouveException("Praticien non trouvé");
+        }
 
         $praticien = new Praticien(
             $row['id'],

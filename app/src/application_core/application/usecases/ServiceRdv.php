@@ -99,7 +99,7 @@ class ServiceRdv implements ServiceRdvInterface
                 'count' => count($rdvs)
             ];
 
-            $response->getBody()->write(json_encode($result));
+            $response->getBody()->write(json_encode($result, JSON_PRETTY_PRINT));
             return $response->withHeader('Content-Type', 'application/json');
 
         } catch (Exception $e) {
@@ -154,7 +154,7 @@ class ServiceRdv implements ServiceRdvInterface
                 'message' => 'Période par défaut : 30 prochains jours'
             ];
 
-            $response->getBody()->write(json_encode($result));
+            $response->getBody()->write(json_encode($result, JSON_PRETTY_PRINT));
             return $response->withHeader('Content-Type', 'application/json');
 
         } catch (Exception $e) {

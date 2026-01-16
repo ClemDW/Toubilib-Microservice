@@ -1,6 +1,7 @@
 <?php
 
 use Slim\Factory\AppFactory;
+use Gateway\Api\Middlewares\CorsMiddleware;
 
 $dotenv = \Dotenv\Dotenv::createImmutable(__DIR__ );
 $dotenv->load();
@@ -13,6 +14,8 @@ $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->addErrorMiddleware(true, false, false);
+
+$app->add(CorsMiddleware::class);
 
 $app = (require __DIR__ . '/../src/api/routes.php')($app);
 
