@@ -18,4 +18,6 @@ composer.phar
 composer.lock
 /app/vendor/
 /app/config/.env
+gateway/vendor/
+gateway/config/.env
 *.env

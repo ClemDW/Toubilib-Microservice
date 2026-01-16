@@ -1,7 +1,6 @@
 <?php
 
 use Slim\Factory\AppFactory;
-use GuzzleHttp\Client;
 
 $dotenv = \Dotenv\Dotenv::createImmutable(__DIR__ );
 $dotenv->load();
@@ -14,10 +13,6 @@ $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
 $app->addErrorMiddleware(true, false, false);
-
-$client = new Client([
-    
-]);
 
 $app = (require __DIR__ . '/../src/api/routes.php')($app);
 

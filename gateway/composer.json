@@ -22,9 +22,9 @@
   },
   "autoload": {
     "psr-4" : {
-      "gateway\\api\\" : "./src/api",
-      "gateway\\core\\" : "./src/application_core",
-      "gateway\\infra\\" : "./src/infrastructure"
+      "Gateway\\Api\\" : "./src/api",
+      "Gateway\\Core\\" : "./src/application_core",
+      "Gateway\\Infra\\" : "./src/infrastructure"
     }
   }
 }
