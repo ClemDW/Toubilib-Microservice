@@ -59,11 +59,16 @@ class RdvRepository implements RdvRepositoryInterface
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute(['id' => $id]);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                throw new RdvNotFoundException("Rendez-vous non trouvé");
+            }
+
             return new RdvDTO(
                 $row['id'],
                 $row['praticien_id'],
                 $row['patient_id'],
-                $row['patient_email'],
+                $row['patient_email'] ?? null,
                 $row['date_heure_debut'],
                 $row['status'],
                 $row['duree'],
@@ -72,7 +77,7 @@ class RdvRepository implements RdvRepositoryInterface
                 $row['motif_visite']
             );
         } catch (\PDOException $e) {
-            throw new RdvNotFoundException("Erreur lors de la récupération d'un rdv");
+            throw new RdvNotFoundException("Erreur lors de la récupération d'un rdv : " . $e->getMessage());
         }
     }
 
@@ -83,7 +88,7 @@ class RdvRepository implements RdvRepositoryInterface
             WHERE praticien_id = :praticien_id 
             AND date_heure_debut >= :date_debut 
             AND date_heure_debut <= :date_fin
-            AND status > 0
+            AND status >= 0
             ORDER BY date_heure_debut ASC";
 
             $stmt = $this->pdo->prepare($sql);
@@ -93,7 +98,7 @@ class RdvRepository implements RdvRepositoryInterface
                 'date_fin' => $dateFin->format('Y-m-d H:i:s')
             ]);
 
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Conversion en array de données formatées
             $rdvs = [];
@@ -102,7 +107,7 @@ class RdvRepository implements RdvRepositoryInterface
                     $row['id'],
                     $row['praticien_id'],
                     $row['patient_id'],
-                    $row['patient_email'],
+                    $row['patient_email'] ?? null,
                     $row['date_heure_debut'],
                     $row['status'],
                     $row['duree'],

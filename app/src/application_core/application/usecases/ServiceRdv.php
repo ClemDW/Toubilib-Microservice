@@ -56,114 +56,71 @@ class ServiceRdv implements ServiceRdvInterface
     }
 
 
-    public function getRdvPraticienPeriode(ServerRequestInterface $request, ResponseInterface $response, array $queryParams): ResponseInterface
+    public function getRdvPraticienPeriode(string $praticienId, string $debutPeriode, string $finPeriode): array
     {
-        try {
-            $praticienId = $request->getAttribute('id');
-            $debutPeriode = $queryParams['debutPeriode'];
-            $finPeriode = $queryParams['finPeriode'];
+        // Vérifier si le praticien existe
+        $this->praticienRepository->get($praticienId);
 
-            // Validation des paramètres
-            $validation = $this->validatePraticienPeriod($praticienId, $debutPeriode, $finPeriode);
-            if (!$validation['valid']) {
-                $response->getBody()->write(json_encode([
-                    'error' => 'Paramètres invalides',
-                    'message' => $validation['message']
-                ]));
-                return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
-            }
-
-
-            // transforme la date locale en UTC
-            // Crée les dates en timezone locale (Europe/Paris)
-            $dateDebut = new \DateTime($debutPeriode . ' 00:00:00', new \DateTimeZone('Europe/Paris'));
-            $dateFin = new \DateTime($finPeriode . ' 23:59:59', new \DateTimeZone('Europe/Paris'));
-
-            // Convertit en UTC pour la BDD
-            $dateDebut->setTimezone(new \DateTimeZone('UTC'));
-            $dateFin->setTimezone(new \DateTimeZone('UTC'));
-
-
-            // Récupération des RDV
-            $rdvs = $this->rdvRepository->getRdvByPraticienAndPeriod($praticienId, $dateDebut, $dateFin);
-
-            $result = [
-                'success' => true,
-                'type' => 'rdv_praticien_periode',
-                'praticien_id' => $praticienId,
-                'data' => $rdvs,
-                'periode' => [
-                    'debut' => $dateDebut,
-                    'fin' => $dateFin
-                ],
-                'count' => count($rdvs)
-            ];
-
-            $response->getBody()->write(json_encode($result, JSON_PRETTY_PRINT));
-            return $response->withHeader('Content-Type', 'application/json');
-
-        } catch (Exception $e) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Erreur serveur',
-                'message' => $e->getMessage()
-            ]));
-            return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+        // Validation des paramètres
+        $validation = $this->validatePraticienPeriod($praticienId, $debutPeriode, $finPeriode);
+        if (!$validation['valid']) {
+            throw new Exception($validation['message']);
         }
-    }
 
-    public function getRdv(ServerRequestInterface $request, ResponseInterface $response, array $queryParams): array
-    {
-        $routeParse = RouteContext::fromRequest($request)->getRouteParser();
-        $rdv = $this->rdvRepository->getRdv($request->getAttribute('id'));
+        // transforme la date locale en UTC
+        $dateDebut = new \DateTime($debutPeriode . ' 00:00:00', new \DateTimeZone('Europe/Paris'));
+        $dateFin = new \DateTime($finPeriode . ' 23:59:59', new \DateTimeZone('Europe/Paris'));
+
+        // Convertit en UTC pour la BDD
+        $dateDebut->setTimezone(new \DateTimeZone('UTC'));
+        $dateFin->setTimezone(new \DateTimeZone('UTC'));
+
+        // Récupération des RDV
+        $rdvs = $this->rdvRepository->getRdvByPraticienAndPeriod($praticienId, $dateDebut, $dateFin);
+
         return [
-            'rdv' => $rdv,
-            'links' => [
-                'self' => [
-                    'href' => $routeParse->urlFor('AfficherRdv', ['id' => $request->getAttribute('id')]),
-                ],
-                'particien' => [
-                    'href' => $routeParse->urlFor('AfficherPraticien', ['id' => $rdv->getPraticienId()]),
-                ]
-            ]
+            'type' => 'rdv_praticien_periode',
+            'praticien_id' => $praticienId,
+            'data' => $rdvs,
+            'periode' => [
+                'debut' => $dateDebut->format('Y-m-d H:i:s'),
+                'fin' => $dateFin->format('Y-m-d H:i:s')
+            ],
+            'count' => count($rdvs)
         ];
-
     }
 
-    public function getRdvPraticien(ServerRequestInterface $request, ResponseInterface $response, array $queryParams): ResponseInterface
+    public function getRdv(string $id): array
     {
-        $praticienId = $request->getAttribute('id');
+        $rdv = $this->rdvRepository->getRdv($id);
+        return [
+            'rdv' => $rdv
+        ];
+    }
+
+    public function getRdvPraticien(string $praticienId): array
+    {
+        // Vérifier si le praticien existe
+        $this->praticienRepository->get($praticienId);
 
         // Logique pour récupérer les RDV du praticien sans période (ex: prochains RDV)
         // Période par défaut : 30 prochains jours
         $dateDebut = new DateTime('today');
         $dateFin = new DateTime('+30 days');
 
-        try {
-            $rdvs = $this->rdvRepository->getRdvByPraticienAndPeriod($praticienId, $dateDebut, $dateFin);
+        $rdvs = $this->rdvRepository->getRdvByPraticienAndPeriod($praticienId, $dateDebut, $dateFin);
 
-            $result = [
-                'success' => true,
-                'type' => 'rdv_praticien_defaut',
-                'praticien_id' => $praticienId,
-                'data' => $rdvs,
-                'periode' => [
-                    'debut' => $dateDebut->format('Y-m-d'),
-                    'fin' => $dateFin->format('Y-m-d')
-                ],
-                'count' => count($rdvs),
-                'message' => 'Période par défaut : 30 prochains jours'
-            ];
-
-            $response->getBody()->write(json_encode($result, JSON_PRETTY_PRINT));
-            return $response->withHeader('Content-Type', 'application/json');
-
-        } catch (Exception $e) {
-            $response->getBody()->write(json_encode([
-                'error' => 'Erreur serveur',
-                'message' => $e->getMessage()
-            ]));
-            return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
-        }
+        return [
+            'type' => 'rdv_praticien_defaut',
+            'praticien_id' => $praticienId,
+            'data' => $rdvs,
+            'periode' => [
+                'debut' => $dateDebut->format('Y-m-d'),
+                'fin' => $dateFin->format('Y-m-d')
+            ],
+            'count' => count($rdvs),
+            'message' => count($rdvs) === 0 ? 'Aucun rendez-vous de prevu pour les 30 prochains jours' : 'Période par défaut : 30 prochains jours'
+        ];
     }
 
     public function validatePraticienPeriod($praticienId, $debutPeriode, $finPeriode): array

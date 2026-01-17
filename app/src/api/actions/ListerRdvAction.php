@@ -15,21 +15,44 @@ class ListerRdvAction
         $this->serviceRdv = $serviceRdv;
     }
 
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
-        $praticienId = $request->getAttribute('id'); // ID depuis l'URL
+        $routeContext = \Slim\Routing\RouteContext::fromRequest($request);
+        $routeName = $routeContext->getRoute()->getName();
         $queryParams = $request->getQueryParams();
-        $queryParams['praticien'] = $praticienId; // injecter l'ID dans le tableau
 
-        if (isset($queryParams['praticien'], $queryParams['debutPeriode'], $queryParams['finPeriode'])) {
-            return $this->serviceRdv->getRdvPraticienPeriode($request, $response, $queryParams);
+        try {
+            if ($routeName === 'AfficherRdv') {
+                $data = $this->serviceRdv->getRdv($args['id']);
+                
+                // Ajout des liens HATEOAS
+                $routeParser = $routeContext->getRouteParser();
+                $data['links'] = [
+                    'self' => ['href' => $routeParser->urlFor('AfficherRdv', ['id' => $args['id']])],
+                    'praticien' => ['href' => $routeParser->urlFor('AfficherPraticien', ['id' => $data['rdv']->getPraticienId()])]
+                ];
+            } elseif ($routeName === 'ListerRdvPraticien') {
+                $praticienId = $args['id'];
+                
+                if (isset($queryParams['debutPeriode'], $queryParams['finPeriode'])) {
+                    $data = $this->serviceRdv->getRdvPraticienPeriode($praticienId, $queryParams['debutPeriode'], $queryParams['finPeriode']);
+                } else {
+                    $data = $this->serviceRdv->getRdvPraticien($praticienId);
+                }
+            } else {
+                // Fallback ou autre cas par défaut
+                $data = $this->serviceRdv->listerRdv();
+            }
+
+            $response->getBody()->write(json_encode($data, JSON_PRETTY_PRINT));
+            return $response->withHeader('Content-Type', 'application/json');
+
+        } catch (\Exception $e) {
+            $response->getBody()->write(json_encode([
+                'error' => 'Not Found or Server Error',
+                'message' => $e->getMessage()
+            ]));
+            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
         }
-
-        if (isset($queryParams['praticien'])) {
-            return $this->serviceRdv->getRdvPraticien($request, $response, $queryParams);
-        }
-
-        return $this->serviceRdv->getRdv($request, $response, $queryParams);
-
     }
 }
