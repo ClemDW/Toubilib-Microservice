@@ -21,6 +21,7 @@ use toubilib\core\application\ports\spi\repositoryInterfaces\PatientRepositoryIn
 use toubilib\core\application\ports\spi\repositoryInterfaces\PraticienRepositoryInterface;
 use toubilib\core\application\ports\spi\repositoryInterfaces\RdvRepositoryInterface;
 use toubilib\core\domain\entities\Rdv;
+use Ramsey\Uuid\Uuid;
 
 class ServiceRdv implements ServiceRdvInterface
 {
@@ -202,7 +203,7 @@ class ServiceRdv implements ServiceRdvInterface
 
     public function isValidUuid($uuid): bool
     {
-        return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $uuid);
+        return Uuid::isValid($uuid);
     }
 
     public function creerRendezVous(InputRendezVousDTO $dto): void
