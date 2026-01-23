@@ -1,0 +1,28 @@
+<?php
+
+namespace toubilib\infra\adapters;
+
+use toubilib\core\application\ports\api\ServicePraticienInterface;
+use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
+use Slim\Exception\HttpNotFoundException;
+
+class GuzzlePraticienAdapter implements ServicePraticienInterface
+{
+    private ClientInterface $client;
+
+    public function __construct(ClientInterface $client)
+    {
+        $this->client = $client;
+    }
+
+    public function getPraticienById(string $id): array
+    {
+        try {
+            $response = $this->client->request('GET', "/praticiens/$id");
+            return json_decode($response->getBody()->getContents(), true);
+        } catch (GuzzleException $e) {
+            return []; 
+        }
+    }
+}

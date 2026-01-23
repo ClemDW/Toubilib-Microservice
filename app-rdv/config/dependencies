@@ -1,0 +1,18 @@
+<?php
+
+use Rdv\Core\Domain\Services\PraticienServiceInterface;
+use Rdv\Infrastructure\Adapters\GuzzlePraticienAdapter;
+use GuzzleHttp\Client;
+
+$containerBuilder->addDefinitions([
+    'praticiens.api' => function () {
+        return new Client([
+            'base_uri' => 'http://api.praticiens', 
+        ]);
+    },
+
+    // Injection de l'adaptateur 
+    PraticienServiceInterface::class => function ($c) {
+        return new GuzzlePraticienAdapter($c->get('praticiens.api'));
+    },
+]);

@@ -21,3 +21,7 @@ composer.lock
 gateway/vendor/
 gateway/config/.env
 *.env
+app-praticiens/vendor/
+app-rdv/vendor/
+app-praticiens/config/.env
+app-rdv/config/.env
