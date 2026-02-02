@@ -2,20 +2,33 @@
 
 namespace toubilib\core\application\ports\api;
 
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use toubilib\core\application\ports\api\dtos\InputRendezVousDTO;
+use toubilib\core\application\ports\api\dtos\InputIndisponibiliteDTO;
+use toubilib\core\domain\entities\praticien\Rdv;
+use toubilib\core\domain\entities\praticien\PraticienDetails;
+use toubilib\core\domain\entities\praticien\Patient;
 
 interface ServiceRdvInterface
 {
-    public function listerRdv(): array;
-    public function creerRendezVous(InputRendezVousDTO $dto);
+    public function getCreneauxOccupes(string $praticienId, \DateTime $dateDebut, \DateTime $dateFin): array;
+
+    public function getRdvById(string $rdvId): ?Rdv;
+
+    public function getPraticienDetails(string $id): ?PraticienDetails;
+
+    public function getPatientById(string $id): ?Patient;
+
+    public function creerRendezVous(InputRendezVousDTO $dto): Rdv;
+
     public function annulerRendezVous(string $idRdv): void;
-    public function agendaPraticien(string $praticienId, ?string $debut = null, ?string $fin = null): array;
-    public function listerRdvPatient(string $patientId): array;
-    public function getRdv(string $id): array;
-    public function getRdvPraticienPeriode(string $praticienId, string $debutPeriode, string $finPeriode): array;
-    public function getRdvPraticien(string $praticienId): array;
+
+    public function consulterAgenda(string $praticienId, \DateTime $dateDebut, \DateTime $dateFin): array;
+
+    public function getHistoriquePatient(string $patientId): array;
+
+    public function creerIndisponibilite(InputIndisponibiliteDTO $dto): string;
+
     public function marquerRdvHonore(string $idRdv): void;
+
     public function marquerRdvNonHonore(string $idRdv): void;
 }

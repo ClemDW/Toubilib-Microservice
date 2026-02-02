@@ -2,11 +2,11 @@
 
 namespace toubilib\api\actions;
 
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
-use toubilib\core\application\ports\api\dtos\PatientDTO;
+use Exception;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
 use toubilib\core\application\ports\api\ServicePatientInterface;
-use toubilib\core\application\ports\spi\exceptions\InscriptionException;
+use toubilib\core\application\ports\api\dtos\InputPatientDTO;
 
 class CreerPatientAction
 {
@@ -17,44 +17,47 @@ class CreerPatientAction
         $this->servicePatient = $servicePatient;
     }
 
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    public function __invoke(Request $request, Response $response): Response
     {
-        $data = $request->getParsedBody();
-
-        // Basic validation
-        $required = ['nom', 'prenom', 'date_naissance', 'adresse', 'code_postal', 'ville', 'email', 'telephone', 'password'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                $response->getBody()->write(json_encode(['error' => "Champ manquant: $field"]));
-                return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
-            }
-        }
-
         try {
-            $patientDto = new PatientDTO(
-                '', 
+            $data = $request->getParsedBody();
+
+            if (empty($data['nom']) || empty($data['prenom']) || empty($data['email']) || empty($data['telephone'])) {
+                $response->getBody()->write(json_encode(['error' => 'Champs obligatoires manquants (nom, prenom, email, telephone)']));
+                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            }
+
+            $dto = new InputPatientDTO(
                 $data['nom'],
                 $data['prenom'],
-                $data['date_naissance'],
-                $data['adresse'],
-                $data['code_postal'],
-                $data['ville'],
                 $data['email'],
                 $data['telephone'],
-                $data['password']
+                $data['dateNaissance'] ?? null,
+                $data['adresse'] ?? null,
+                $data['codePostal'] ?? null,
+                $data['ville'] ?? null
             );
 
-            $this->servicePatient->creerComptePatient($patientDto);
+            $patient = $this->servicePatient->createPatient($dto);
 
-            $response->getBody()->write(json_encode(['success' => true, 'message' => 'Compte patient créé']));
-            return $response->withStatus(201)->withHeader('Content-Type', 'application/json');
+            $responseData = [
+                'id' => $patient->getId(),
+                'nom' => $patient->getNom(),
+                'prenom' => $patient->getPrenom(),
+                'email' => $patient->getEmail()
+            ];
 
-        } catch (InscriptionException $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()]));
-            return $response->withStatus(409)->withHeader('Content-Type', 'application/json');
-        } catch (\Throwable $e) {
-            $response->getBody()->write(json_encode(['error' => 'Erreur serveur: ' . $e->getMessage()]));
-            return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+            $response->getBody()->write(json_encode($responseData));
+            return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withStatus(201);
+
+        } catch (Exception $e) {
+            $error = ['error' => 'Erreur lors de la création du patient: ' . $e->getMessage()];
+            $response->getBody()->write(json_encode($error));
+            return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withStatus(500);
         }
     }
 }

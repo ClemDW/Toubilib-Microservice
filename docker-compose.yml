@@ -8,7 +8,7 @@ services:
       context: build
       dockerfile: 8.4-cli.Dockerfile
     ports:
-      - '6080:80'
+      - "6080:80"
     volumes:
       - ./app:/var/php
     working_dir: /var/php
@@ -17,53 +17,14 @@ services:
     depends_on:
       - toubiprati.db
       - toubiauth.db
-      - toubipatient.db
-      - toubirdv.db
-    command: sh -c "composer install && php -S 0.0.0.0:80 -t /var/php/public"
-
-  praticiens.toubilib:
-    build:
-      context: build
-      dockerfile: 8.4-cli.Dockerfile
-    ports:
-      - '6082:80'
-    volumes:
-      - ./app-praticiens:/var/php
-    working_dir: /var/php
-    networks:
-      - toubilib.net
-    depends_on:
-      - toubiprati.db
-      - toubiauth.db
-      - toubipatient.db
-      - toubirdv.db
-    command: sh -c "composer install && php -S 0.0.0.0:80 -t /var/php/public"
-
-  rdvs.toubilib:
-    build:
-      context: build
-      dockerfile: 8.4-cli.Dockerfile
-    ports:
-      - '6083:80'
-    volumes:
-      - ./app-rdv:/var/php
-    working_dir: /var/php
-    networks:
-      - toubilib.net
-    depends_on:
-      - toubiprati.db
-      - toubiauth.db
-      - toubipatient.db
-      - toubirdv.db
-    command: sh -c "composer install && php -S 0.0.0.0:80 -t /var/php/public"
-
+    command: "php -S 0.0.0.0:80 -t /var/php/public"
 
   gateway.toubilib:
     build:
       context: build
       dockerfile: 8.4-cli.Dockerfile
     ports:
-      - '6081:80'
+      - "6081:80"
     volumes:
       - ./gateway:/var/php
     working_dir: /var/php
@@ -71,54 +32,154 @@ services:
       - toubilib.net
     depends_on:
       - api.toubilib
-    command: sh -c "composer install && php -S 0.0.0.0:80 -t /var/php/public"
+    command: "php -S 0.0.0.0:80 -t /var/php/public"
 
-    # service toubiprat.db : base de données postgresql pour les praticiens
+  service-auth.toubilib:
+    build:
+      context: build
+      dockerfile: 8.4-cli.Dockerfile
+    ports:
+      - "6084:80"
+    volumes:
+      - ./app-auth:/var/php
+    working_dir: /var/php
+    networks:
+      - toubilib.net
+    depends_on:
+      - toubiauth.db
+    command: "php -S 0.0.0.0:80 -t /var/php/public"
+
+  service-praticiens.toubilib:
+    build:
+      context: build
+      dockerfile: 8.4-cli.Dockerfile
+    ports:
+      - "6082:80"
+    volumes:
+      - ./app-praticiens:/var/php
+    working_dir: /var/php
+    networks:
+      - toubilib.net
+    depends_on:
+      - toubiprati.db
+    command: "php -S 0.0.0.0:80 -t /var/php/public"
+
+  service-rdv.toubilib:
+    build:
+      context: build
+      dockerfile: 8.4-cli.Dockerfile
+    ports:
+      - "6083:80"
+    volumes:
+      - ./app-rdv:/var/php
+    working_dir: /var/php
+    networks:
+      - toubilib.net
+    depends_on:
+      toubirdv.db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    command: "php -S 0.0.0.0:80 -t /var/php/public"
+
+  #######################################
+  ### RabbitMQ Service
+  #######################################
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 8s
+      timeout: 30s
+      retries: 3
+    networks:
+      - toubilib.net
+    volumes:
+      - ./rabbitmq.toubi:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: toubi
+      RABBITMQ_DEFAULT_PASS: toubi
+
+  ##############################################
+  ### MailCatcher
+  ##############################################
+  mail.toubi:
+    build:
+      context: build
+      dockerfile: mailcatcher.Dockerfile
+    networks:
+      - toubilib.net
+    ports:
+      - "1080:1080"
+
+  ##############################################
+  ### Service Mail (consommateur RabbitMQ)
+  ##############################################
+  service-mail.toubilib:
+    build:
+      context: build
+      dockerfile: 8.4-cli.Dockerfile
+    volumes:
+      - ./app-mail:/var/www
+    working_dir: /var/www
+    networks:
+      - toubilib.net
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mail.toubi:
+        condition: service_started
+    env_file: ./app-mail/.env
+    command: "php /var/www/bin/consumer.php"
+
+  # service toubiprat.db : base de données postgresql pour les praticiens
 
   toubiprati.db:
-    image: 'postgres:latest'
+    image: "postgres:latest"
     env_file: ./toubipratdb.env
     ports:
-      - '5432:5432'
+      - "5432:5432"
     networks:
       - toubilib.net
     volumes:
-      - ./sql/toubiprat.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
-      - ./sql/toubiprat.data.sql:/docker-entrypoint-initdb.d/2-data.sql
-
+      - ./sql/toubiprat.schema.sql:/docker-entrypoint-initdb.d/01-toubiprat.schema.sql
+      - ./sql/toubiprat.data.sql:/docker-entrypoint-initdb.d/02-toubiprat.data.sql
 
   toubirdv.db:
-    image: 'postgres:latest'
+    image: "postgres:latest"
     env_file: ./toubirdvdb.env
     ports:
-      - '5434:5432'
+      - "5434:5432"
     networks:
       - toubilib.net
     volumes:
-      - ./sql/toubirdv.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
-      - ./sql/toubirdv.data.sql:/docker-entrypoint-initdb.d/2-data.sql
+      - ./sql/toubirdv.schema.sql:/docker-entrypoint-initdb.d/01-toubirdv.schema.sql
+      - ./sql/toubirdv.data.sql:/docker-entrypoint-initdb.d/02-toubirdv.data.sql
 
-  toubiauth.db:
-    image: 'postgres:latest'
-    env_file: ./toubiauthdb.env
-    ports:
-      - '5436:5432'
-    networks:
-      - toubilib.net
-    volumes:
-      - ./sql/toubiauth.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
-      - ./sql/toubiauth.data.sql:/docker-entrypoint-initdb.d/2-data.sql
-
-  toubipatient.db:
-    image: 'postgres:latest'
+  toubipat.db:
+    image: "postgres:latest"
     env_file: ./toubipatientdb.env
     ports:
-      - '5438:5432'
+      - "5433:5432"
     networks:
       - toubilib.net
     volumes:
-      - ./sql/toubipat.schema.sql:/docker-entrypoint-initdb.d/1-schema.sql
-      - ./sql/toubipat.data.sql:/docker-entrypoint-initdb.d/2-data.sql
+      - ./sql/toubipat.schema.sql:/docker-entrypoint-initdb.d/01-toubipat.schema.sql
+      - ./sql/toubipat.data.sql:/docker-entrypoint-initdb.d/02-toubipat.data.sql
+
+  toubiauth.db:
+    image: "postgres:latest"
+    env_file: ./toubiauthdb.env
+    ports:
+      - "5435:5432"
+    networks:
+      - toubilib.net
+    volumes:
+      - ./sql/toubiauth.schema.sql:/docker-entrypoint-initdb.d/01-toubiauth.schema.sql
+      - ./sql/toubiauth.data.sql:/docker-entrypoint-initdb.d/02-toubiauth.data.sql
 
   #
   # service administration des bases sql
@@ -126,6 +187,16 @@ services:
   adminer:
     image: adminer
     ports:
-      - '8080:8080'
+      - "8080:8080"
     networks:
       - toubilib.net
+
+  composer:
+    image: composer:2.8.6
+    command: ["composer", "install"]
+    networks:
+      - toubilib.net
+    volumes:
+      - ./app:/app
+    depends_on:
+      - api.toubilib

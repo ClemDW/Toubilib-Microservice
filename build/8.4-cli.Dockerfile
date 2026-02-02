@@ -20,9 +20,3 @@ RUN install-php-extensions  pdo_mysql pdo_pgsql
 RUN install-php-extensions  xdebug
 RUN install-php-extensions @composer
 EXPOSE 80
-
-
-
-#COPY php.ini /usr/local/etc/php/
-
-

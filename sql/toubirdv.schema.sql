@@ -14,5 +14,15 @@ CREATE TABLE "public"."rdv" (
     "motif_visite" character varying(128)
 ) WITH (oids = false);
 
+DROP TABLE IF EXISTS "indisponibilite";
+CREATE TABLE "public"."indisponibilite" (
+    "id" character varying(64) NOT NULL,
+    "praticien_id" character varying(64) NOT NULL,
+    "date_debut" timestamp NOT NULL,
+    "date_fin" timestamp NOT NULL,
+    "motif" character varying(128),
+    CONSTRAINT "indisponibilite_pkey" PRIMARY KEY ("id")
+) WITH (oids = false);
+
 
 -- 2025-06-30 12:27:45.555336+00

@@ -21,7 +21,8 @@ CREATE TABLE "public"."patient" (
     "code_postal" character varying(8),
     "ville" character varying(64),
     "email" character varying(128),
-    "telephone" character varying(24) NOT NULL
+    "telephone" character varying(24) NOT NULL,
+    CONSTRAINT "patient_pkey" PRIMARY KEY ("id")
 ) WITH (oids = false);
 
 

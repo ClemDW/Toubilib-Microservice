@@ -2,31 +2,17 @@
 
 namespace toubilib\core\application\ports\api\dtos;
 
-class AuthDTO
-{
+use toubilib\core\application\ports\api\dtos\UserProfileDTO;
+
+class AuthDTO {
     public ProfileDTO $profile;
-    public string $accessToken;
-    public string $refreshToken;
+    public string $access_token;
+    public string $refresh_token;
 
-    public function __construct(ProfileDTO $profile, string $accessToken, string $refreshToken)
-    {
+    public function __construct(ProfileDTO $profile, string $access_token, string $refresh_token) {
         $this->profile = $profile;
-        $this->accessToken = $accessToken;
-        $this->refreshToken = $refreshToken;
-    }
-
-    public function getProfile(): ProfileDTO
-    {
-        return $this->profile;
-    }
-
-    public function getAccessToken(): string
-    {
-        return $this->accessToken;
-    }
-
-    public function getRefreshToken(): string
-    {
-        return $this->refreshToken;
+        $this->access_token = $access_token;
+        $this->refresh_token = $refresh_token;
     }
 }
+

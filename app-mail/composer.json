@@ -1,0 +1,15 @@
+{
+  "name": "toubilib/app-mail",
+  "description": "Service de consommation des messages RabbitMQ et envoi d'emails",
+  "type": "project",
+  "require": {
+    "php": "^8.2",
+    "php-amqplib/php-amqplib": "^3.6",
+    "symfony/mailer": "^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "toubilib\\mail\\": "src/"
+    }
+  }
+}

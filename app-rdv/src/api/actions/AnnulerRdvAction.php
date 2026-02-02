@@ -2,39 +2,54 @@
 
 namespace toubilib\api\actions;
 
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
 use toubilib\core\application\ports\api\ServiceRdvInterface;
-use toubilib\core\application\ports\spi\exceptions\RendezVousNonTrouveException;
-use toubilib\core\application\ports\spi\exceptions\RdvDejaAnnuleException;
-use toubilib\core\application\ports\spi\exceptions\RdvPasseNonAnnulableException;
+use Exception;
 
 class AnnulerRdvAction
 {
-    public function __construct(private ServiceRdvInterface $serviceRdv) {}
+    private ServiceRdvInterface $serviceRendezVous;
 
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args = []): ResponseInterface
+    public function __construct(ServiceRdvInterface $serviceRendezVous)
     {
-        $id = $request->getAttribute('id') ?? ($args['id'] ?? null);
-        if (!$id) {
-            $response->getBody()->write(json_encode(['error' => 'Identifiant de rendez-vous manquant'], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+        $this->serviceRendezVous = $serviceRendezVous;
+    }
+
+    public function __invoke(Request $request, Response $response, array $args): Response
+    {
+        $idRdv = $args['id'] ?? null;
+
+        if (!$idRdv) {
+            $response->getBody()->write(json_encode(['error' => 'ID du rendez-vous manquant']));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
         }
 
         try {
-            $this->serviceRdv->annulerRendezVous($id);
-            // 204 No Content (soft delete/annulation)
-            return $response->withStatus(204);
+            $rdv = $this->serviceRendezVous->getRdvById($idRdv);
+            if (!$rdv) {
+                 throw new Exception("Rendez-vous introuvable.");
+            }
 
-        } catch (RendezVousNonTrouveException $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
-        } catch (RdvDejaAnnuleException|RdvPasseNonAnnulableException $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(409)->withHeader('Content-Type', 'application/json');
+            $this->serviceRendezVous->annulerRendezVous($idRdv);
+
+            $response->getBody()->write(json_encode([
+            'message' => 'Rendez-vous annulé avec succès',
+            'id'      => $idRdv,
+            '_links'  => [
+                'self'     => ['href' => "/rdvs/{$idRdv}"],
+                'praticien'=> ['href' => "/praticiens/{$rdv->getPraticienId()}"],
+                'patient'  => ['href' => "/patients/{$rdv->getPatientId()}"]
+            ]
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(200);
         } catch (\Throwable $e) {
-            $response->getBody()->write(json_encode(['error' => 'Erreur serveur'], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+            $response->getBody()->write(json_encode([
+                'error' => $e->getMessage()
+            ]));
+
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
         }
     }
 }

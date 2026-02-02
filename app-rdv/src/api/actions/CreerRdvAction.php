@@ -2,57 +2,71 @@
 
 namespace toubilib\api\actions;
 
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\ServerRequestInterface;
+use Exception;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
 use toubilib\core\application\ports\api\ServiceRdvInterface;
 use toubilib\core\application\ports\api\dtos\InputRendezVousDTO;
-use toubilib\core\application\ports\spi\exceptions\CreneauInvalideException;
-use toubilib\core\application\ports\spi\exceptions\MotifInvalideException;
-use toubilib\core\application\ports\spi\exceptions\PatientNonTrouveException;
-use toubilib\core\application\ports\spi\exceptions\PraticienIndisponibleException;
-use toubilib\core\application\ports\spi\exceptions\PraticienNonTrouveException;
+
 
 class CreerRdvAction
 {
-    private ServiceRdvInterface $serviceRdv;
+    private ServiceRdvInterface $rdvService;
 
-    public function __construct(ServiceRdvInterface $serviceRdv)
+    public function __construct(ServiceRdvInterface $rdvService)
     {
-        $this->serviceRdv = $serviceRdv;
+        $this->rdvService = $rdvService;
     }
 
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface{
-
-        $dto = $request->getAttribute('inputRdvDto');
-        if (!$dto instanceof InputRendezVousDTO) {
-            $response->getBody()->write(json_encode(['error' => 'DTO de rendez-vous manquant ou invalide'], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
-        }
-
+    public function __invoke(Request $request, Response $response): Response
+    {
         try {
-            $this->serviceRdv->creerRendezVous($dto);
+            $body = (array)$request->getParsedBody();
 
-            $payload = ['success' => true, 'message' => 'Rendez-vous créé'];
-            $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE));
-            return $response
-                ->withStatus(201)
-                ->withHeader('Content-Type', 'application/json');
+            // Vérification des champs
+            $required = ['praticienId', 'patientId', 'dateHeure', 'motifVisite', 'duree'];
+            foreach ($required as $field) {
+                if (empty($body[$field] ?? null)) {
+                    $response->getBody()->write(json_encode(['error' => 'Champs manquants']));
+                    return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                }
+            }
 
-        } catch (PraticienNonTrouveException|PatientNonTrouveException $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+            // Création du DTO
+            $dto = new InputRendezVousDTO(
+                $body['praticienId'],
+                $body['patientId'],
+                new \DateTimeImmutable($body['dateHeure']),
+                $body['motifVisite'],
+                (int)$body['duree']
+            );
 
-        } catch (MotifInvalideException|CreneauInvalideException $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+            $rdvCree = $this->rdvService->creerRendezVous($dto);
 
-        } catch (PraticienIndisponibleException $e) {
-            $response->getBody()->write(json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(409)->withHeader('Content-Type', 'application/json');
+            $payload = [
+                'message' => 'Rendez-vous créé avec succès',
+                'rdv' => [
+                    'id' => $rdvCree->getId(),
+                    'praticienId' => $rdvCree->getPraticienId(),
+                    'patientId' => $rdvCree->getPatientId(),
+                    'dateDebut' => $rdvCree->getDateHeureDebut()->format('Y-m-d H:i:s'),
+                    'dateFin' => $rdvCree->getDateHeureFin()?->format('Y-m-d H:i:s'),
+                    'duree' => $rdvCree->getDuree(),
+                    'statut' => $rdvCree->getStatus(),
+                    'motifVisite' => $rdvCree->getMotifVisite()
+                ]
+            ];
 
-        } catch (\Throwable $e) {
-            $response->getBody()->write(json_encode(['error' => 'Erreur serveur'], JSON_UNESCAPED_UNICODE));
-            return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+            $response->getBody()->write(json_encode($payload, JSON_PRETTY_PRINT));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
+
+        } catch (\DomainException $e) {
+            $response->getBody()->write(json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(422);
+
+        } catch (Exception $e) {
+            $response->getBody()->write(json_encode(['error' => 'Erreur interne', 'details' => $e->getMessage()], JSON_PRETTY_PRINT));
+            return $response->withHeader('Content-Type', 'application/json')->withStatus(500);
         }
     }
 }
