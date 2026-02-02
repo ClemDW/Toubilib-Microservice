@@ -2,7 +2,7 @@
 Semih TOPCU, DE WASCH Clément, SALZARD Manech
 
 L'organisation du git est assez chaotique car ayant eu des problèmes avec 2 forks nous avons tout repassé à la main sur ce 1er fork pour avoir une version propre
-Toutes les fonctionnalités de microservices sont fonctionnelles
+Toutes les fonctionnalités de microservices sont fonctionnelles et une page pour tout tester facilement est disponible après lancement du conteneur sur le port 6081
 - F1 Clément
 - F2 Semih
 - F3 Manech
