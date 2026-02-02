@@ -19,11 +19,6 @@ dist/
 tmp/
 temp/
 
-# Environment files
-*.env
-.env
-.env.local
-.env.*.local
 # IDE files
 .vscode/
 .idea/
